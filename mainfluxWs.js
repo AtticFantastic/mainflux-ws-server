@@ -7,19 +7,39 @@
  */
 
 var config = require('./config');
+var nats = require('nats').connect('nats://' + config.nats.host + ':' + config.nats.port);
 
-var WebSocketServer = require('ws').Server
-  , wsServer = new WebSocketServer({ port: config.ws.port });
+var WebSocketServer = require('ws').Server;
 
-wsServer.on('connection', function connection(ws) {
-  ws.on('message', function incoming(message) {
-    console.log('received: %s', message);
-  });
+/** Use `wss://` for secure connections */
+var wsServer = new WebSocketServer({ host: config.ws.port, port: config.ws.port});
 
-  ws.send('something');
+wsServer.on('connection', function(ws) {
+    ws.on('message', function(msg) {
+        console.log('received: %s', msg);
+
+        /**
+         * WS client can subscribe on per device subject
+         * or just send commands to Core via NATS (ex. `getDevices`)
+         */
+        if (jmsg.method === 'subscribe') {
+            console.log('SUBSCRIBING...');
+
+            nats.subscribe('devices.' + msg.body.deviceId + '.attributes.' + msg.body.attribute, function(upd) {
+                console.log('Received a message: ' + upd);
+                /** Recieved message from NATS is string type, we need to convert it to JSON */
+                ws.send(JSON.parse(upd));
+            });
+        } else {
+            nats.request('core_in', JSON.stringify(msg), {'max':1}, function(rsp) {
+                ws.send(JSON.parse(rsp));
+            });
+        }
+    });
+
 });
 
-console.log('WS magic happens on port 5152');
+console.log('WS magic happens on port ', config.ws.port);
 
 /**
  * Exports
