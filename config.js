@@ -11,7 +11,7 @@ var config = {};
  * WS Server
  */
 config.ws = {
-    host: 'localhost',
+    host: '0.0.0.0',
     port: 9090,
 }
 
@@ -19,7 +19,7 @@ config.ws = {
  * NATS
  */
 config.nats = {
-    host : 'localhost',
+    host : 'nats',
     port : 4222
 }
 
